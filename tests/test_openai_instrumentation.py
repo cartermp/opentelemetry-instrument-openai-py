@@ -20,10 +20,24 @@ class TestOpenAIInstrumentation(TestBase):
         if num_spans == 1:
             return finished_spans[0]
         return finished_spans
+    
+    @mock.patch(
+    "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
+    new=MockChatCompletion.create,
+    )
+    def test_instrumentation(self):
+        OpenAIInstrumentator().instrument()
+        openai.ChatCompletion.create()
+
+        span = self.assert_spans(1)
+        self.assertEqual(span.name, "poopy")
+        self.assertEqual(span.attributes["poopy"], 12)
 
 
-    @mock.patch("openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
-                new=MockChatCompletion.create)
+    @mock.patch(
+        "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
+        new=MockChatCompletion.create,
+    )
     def test_instrumentation_works(self):
         OpenAIInstrumentator().instrument()
         openai.ChatCompletion.create()

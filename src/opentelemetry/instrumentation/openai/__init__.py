@@ -50,12 +50,14 @@ from opentelemetry.instrumentation.utils import (
 from opentelemetry.instrumentation.openai.package import _instruments
 from opentelemetry.instrumentation.openai.version import __version__
 
+
 def _instrument_chat(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
             return
 
-        with tracer.start_as_current_span("openai.chat"):
+        with tracer.start_as_current_span("openai.chat") as span:
+            span.set_attribute("poopy", 12)
             result = wrapped(*args, **kwargs)
 
         return result
@@ -74,12 +76,6 @@ class OpenAIInstrumentator(BaseInstrumentor):
         return _instruments
 
     def _instrument(self, **kwargs):
-        """Instruments all OpenAI client calls.
-
-        Args:
-            **kwargs: Optional arguments
-                ``tracer_provider``: a TracerProvider, defaults to global
-        """
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(__name__, __version__, tracer_provider)
         _instrument_chat(tracer)
