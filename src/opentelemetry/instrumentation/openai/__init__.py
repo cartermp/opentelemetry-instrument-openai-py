@@ -27,7 +27,7 @@ Instrument all OpenAI client calls:
     # Enable instrumentation
     OpenAIInstrumentation().instrument()
 
-    openai.ChatCompletion.create(
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": "tell me a joke about opentelemetry"}],
     )
@@ -70,9 +70,32 @@ def _instrument_chat(tracer: Tracer):
             span.set_attribute(f"{name}.logit_bias", kwargs["logit_bias"] if "logit_bias" in kwargs else "")
             span.set_attribute(f"{name}.name", kwargs["name"] if "name" in kwargs else "")
 
-            result = wrapped(*args, **kwargs)
+            # "messages": [{"role": "user", "content": "Hello!"}]
+            # role can be user, system, or assistant
+            # capture the messages as an attribute
+            messages = kwargs["messages"]
+            messages_str = ""
+            for message in messages:
+                messages_str += f"{message['role']}: {message['content']}\n"
 
-        return result
+            span.set_attribute(f"{name}.messages", messages_str)
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.id", response["id"])
+            span.set_attribute(f"{name}.response.object", response["object"])
+            span.set_attribute(f"{name}.response.created", response["created"])
+            for index, choice in enumerate(response["choices"]):
+                span.set_attribute(f"{name}.response.choices.{index}.message.role", choice["message"]["role"])
+                span.set_attribute(f"{name}.response.choices.{index}.message.content", choice["message"]["content"])
+                span.set_attribute(f"{name}.response.choices.{index}.finish_reason", choice["finish_reason"])
+
+            span.set_attribute(f"{name}.response.usage.prompt_tokens", response["usage"]["prompt_tokens"])
+            span.set_attribute(f"{name}.response.usage.completion_tokens", response["usage"]["completion_tokens"])
+            span.set_attribute(f"{name}.response.usage.total_tokens", response["usage"]["total_tokens"])
+
+
+        return response
 
     wrapt.wrap_function_wrapper(openai.ChatCompletion, "create", _instrumented_create)
 
