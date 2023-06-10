@@ -20,6 +20,15 @@ class TestOpenAIInstrumentation(TestBase):
         if num_spans == 1:
             return finished_spans[0]
         return finished_spans
+    
+    def call_chat(self):
+        return openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "tell me a joke about opentelemetry"}],
+            temperature=0.0,
+            max_tokens=150,
+            name="test",
+        )
 
     @mock.patch(
         "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
@@ -27,10 +36,22 @@ class TestOpenAIInstrumentation(TestBase):
     )
     def test_instrumentat(self):
         OpenAIInstrumentator().instrument()
-        openai.ChatCompletion.create()
+        self.call_chat()
 
         span = self.assert_spans(1)
-        self.assertEqual(span.name, "openai.chat")
+        name = "openai.chat"
+        self.assertEqual(span.name, name)
+        self.assertEqual(span.attributes[f"{name}.model"], "gpt-3.5-turbo")
+        self.assertEqual(span.attributes[f"{name}.temperature"], 0.0)
+        self.assertEqual(span.attributes[f"{name}.top_p"], 1.0)
+        self.assertEqual(span.attributes[f"{name}.n"], 1)
+        self.assertEqual(span.attributes[f"{name}.stream"], False)
+        self.assertEqual(span.attributes[f"{name}.stop"], "")
+        self.assertEqual(span.attributes[f"{name}.max_tokens"], 150)
+        self.assertEqual(span.attributes[f"{name}.presence_penalty"], 0.0)
+        self.assertEqual(span.attributes[f"{name}.frequency_penalty"], 0.0)
+        self.assertEqual(span.attributes[f"{name}.logit_bias"], "")
+        self.assertEqual(span.attributes[f"{name}.name"], "test")
 
     @mock.patch(
         "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
@@ -38,9 +59,9 @@ class TestOpenAIInstrumentation(TestBase):
     )
     def uninstrument(self):
         OpenAIInstrumentator().uninstrument()
-        openai.ChatCompletion.create()
+        self.call_chat()
         self.assert_spans(0)
 
         OpenAIInstrumentator().instrument()
-        openai.ChatCompletion.create()
+        self.call_chat()
         self.assert_spans(1)

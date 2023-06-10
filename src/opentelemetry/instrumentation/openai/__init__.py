@@ -32,7 +32,7 @@ Instrument all OpenAI client calls:
         messages=[{"role": "user", "content": "tell me a joke about opentelemetry"}],
     )
 """
-
+import math
 from typing import Collection
 
 import wrapt
@@ -56,7 +56,20 @@ def _instrument_chat(tracer: Tracer):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
             return
 
-        with tracer.start_as_current_span("openai.chat") as span:
+        name = "openai.chat"
+        with tracer.start_as_current_span(name) as span:
+            span.set_attribute(f"{name}.model", kwargs["model"])
+            span.set_attribute(f"{name}.temperature", kwargs["temperature"] if "temperature" in kwargs else 1.0)
+            span.set_attribute(f"{name}.top_p", kwargs["top_p"] if "top_p" in kwargs else 1.0)
+            span.set_attribute(f"{name}.n", kwargs["n"] if "n" in kwargs else 1)
+            span.set_attribute(f"{name}.stream", kwargs["stream"] if "stream" in kwargs else False)
+            span.set_attribute(f"{name}.stop", kwargs["stop"] if "stop" in kwargs else "")
+            span.set_attribute(f"{name}.max_tokens", kwargs["max_tokens"] if "max_tokens" in kwargs else math.inf)
+            span.set_attribute(f"{name}.presence_penalty", kwargs["presence_penalty"] if "presence_penalty" in kwargs else 0.0)
+            span.set_attribute(f"{name}.frequency_penalty", kwargs["frequency_penalty"] if "frequency_penalty" in kwargs else 0.0)
+            span.set_attribute(f"{name}.logit_bias", kwargs["logit_bias"] if "logit_bias" in kwargs else "")
+            span.set_attribute(f"{name}.name", kwargs["name"] if "name" in kwargs else "")
+
             result = wrapped(*args, **kwargs)
 
         return result
