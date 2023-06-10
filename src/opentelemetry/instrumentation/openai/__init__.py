@@ -57,7 +57,6 @@ def _instrument_chat(tracer: Tracer):
             return
 
         with tracer.start_as_current_span("openai.chat") as span:
-            span.set_attribute("poopy", 12)
             result = wrapped(*args, **kwargs)
 
         return result
