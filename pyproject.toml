@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "opentelemetry-instrument-openai"
+version = "0.1.0"
+description = "OpenTelemetry openai instrumentation"
+license = "Apache-2.0"
+authors = ["cartermp <pcarter@fastmail.com>"]
+maintainers = ["cartermp <pcarter@fastmail.com>"]
+readme = "README.md"
+packages = [{include = "opentelemetry", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "~=0.27.8"
+opentelemetry-api = "~=1.18.0"
+opentelemetry-instrumentation = "~=0.39b0"
+opentelemetry-semantic-conventions = "~=0.39b0"
+wrapt = "^1.15.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "*"
+opentelemetry-test-utils = "~=0.39b0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
