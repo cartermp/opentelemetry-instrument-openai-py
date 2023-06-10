@@ -68,10 +68,6 @@ def _instrument_chat(tracer: Tracer):
             span.set_attribute(f"{name}.frequency_penalty", kwargs["frequency_penalty"] if "frequency_penalty" in kwargs else 0.0)
             span.set_attribute(f"{name}.logit_bias", kwargs["logit_bias"] if "logit_bias" in kwargs else "")
             span.set_attribute(f"{name}.name", kwargs["name"] if "name" in kwargs else "")
-
-            # "messages": [{"role": "user", "content": "Hello!"}]
-            # role can be user, system, or assistant
-            # capture the messages by index
             for index, message in enumerate(kwargs["messages"]):
                 span.set_attribute(f"{name}.messages.{index}.role", message["role"])
                 span.set_attribute(f"{name}.messages.{index}.content", message["content"])
