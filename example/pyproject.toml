@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "chat-example"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+authors = ["Phillip Carter <pcarter@fastmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+opentelemetry-instrument-openai = {path = "../", develop = true}
+opentelemetry-distro = "^0.39b0"
+python-dotenv = "^1.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

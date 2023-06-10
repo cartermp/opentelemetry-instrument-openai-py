@@ -37,7 +37,6 @@ from typing import Collection
 
 import wrapt
 import openai
-from openai.api_resources.abstract.engine_api_resource import EngineAPIResource
 
 from opentelemetry import context as context_api
 from opentelemetry.trace import get_tracer, Tracer
@@ -104,7 +103,7 @@ def _uninstrument():
     unwrap(openai.ChatCompletion, "create")
 
 
-class OpenAIInstrumentator(BaseInstrumentor):
+class OpenAIInstrumentor(BaseInstrumentor):
     """An instrumenter for OpenAI's client library."""
 
     def instrumentation_dependencies(self) -> Collection[str]:

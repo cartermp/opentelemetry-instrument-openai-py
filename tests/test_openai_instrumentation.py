@@ -1,7 +1,7 @@
 import openai
 from unittest import mock
 from openai.api_resources.abstract.engine_api_resource import EngineAPIResource
-from opentelemetry.instrumentation.openai import OpenAIInstrumentator
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 from opentelemetry.test.test_base import TestBase
 
 
@@ -51,8 +51,8 @@ class TestOpenAIInstrumentation(TestBase):
         "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
         new=MockChatCompletion.create,
     )
-    def test_instrumentat(self):
-        OpenAIInstrumentator().instrument()
+    def test_instrument(self):
+        OpenAIInstrumentor().instrument()
         result = self.call_chat()
 
         span = self.assert_spans(1)
@@ -107,10 +107,10 @@ class TestOpenAIInstrumentation(TestBase):
         new=MockChatCompletion.create,
     )
     def uninstrument(self):
-        OpenAIInstrumentator().uninstrument()
+        OpenAIInstrumentor().uninstrument()
         self.call_chat()
         self.assert_spans(0)
 
-        OpenAIInstrumentator().instrument()
+        OpenAIInstrumentor().instrument()
         self.call_chat()
         self.assert_spans(1)
