@@ -50,28 +50,24 @@ from opentelemetry.instrumentation.utils import (
 from opentelemetry.instrumentation.openai.package import _instruments
 from opentelemetry.instrumentation.openai.version import __version__
 
-
-def _instrument(tracer: Tracer):
-    def _instrumented_create(wrapped, args, kwargs):
+def _instrument_chat(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
             return
 
-        instance = args[0]
-        class_name = instance.__class__.__name__.lower()
-
-        with tracer.start_as_current_span(f"openai.{class_name}"):
+        with tracer.start_as_current_span("openai.chat"):
             result = wrapped(*args, **kwargs)
 
         return result
 
-    wrapt.wrap_function_wrapper(EngineAPIResource, "create", _instrumented_create)
+    wrapt.wrap_function_wrapper(openai.ChatCompletion, "create", _instrumented_create)
 
 
 def _uninstrument():
     unwrap(openai.ChatCompletion, "create")
 
 
-class OpenAIInstrumentation(BaseInstrumentor):
+class OpenAIInstrumentator(BaseInstrumentor):
     """An instrumenter for OpenAI's client library."""
 
     def instrumentation_dependencies(self) -> Collection[str]:
@@ -86,7 +82,7 @@ class OpenAIInstrumentation(BaseInstrumentor):
         """
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(__name__, __version__, tracer_provider)
-        _instrument(tracer)
+        _instrument_chat(tracer)
 
     def _uninstrument(self, **kwargs):
         _uninstrument()

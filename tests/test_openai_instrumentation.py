@@ -1,11 +1,13 @@
 import openai
-from opentelemetry.instrumentation.openai import OpenAIInstrumentation
+from unittest import mock
+from openai.api_resources.abstract.engine_api_resource import EngineAPIResource
+from opentelemetry.instrumentation.openai import OpenAIInstrumentator
 from opentelemetry.test.test_base import TestBase
 
 
-# mock the openai ChatCompletion class
-class MockChatCompletion:
-    def create(self):
+class MockChatCompletion(EngineAPIResource):
+    @classmethod
+    def create(cls, *args, **kwargs):
         return "mocked"
 
 
@@ -19,12 +21,14 @@ class TestOpenAIInstrumentation(TestBase):
             return finished_spans[0]
         return finished_spans
 
-    def test_instrumentation(self):
-        instrumentation = OpenAIInstrumentation()
-        instrumentation.instrument()
 
-        # mock the openai ChatCompletion class
-        openai.ChatCompletion = MockChatCompletion
-        openai.ChatCompletion().create()
+    @mock.patch("openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
+                new=MockChatCompletion.create)
+    def test_instrumentation_works(self):
+        OpenAIInstrumentator().instrument()
+        openai.ChatCompletion.create()
+        self.assert_spans(1)
 
+        OpenAIInstrumentator().uninstrument()
+        openai.ChatCompletion.create()
         self.assert_spans(1)
