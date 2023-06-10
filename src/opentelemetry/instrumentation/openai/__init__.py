@@ -71,13 +71,10 @@ def _instrument_chat(tracer: Tracer):
 
             # "messages": [{"role": "user", "content": "Hello!"}]
             # role can be user, system, or assistant
-            # capture the messages as an attribute
-            messages = kwargs["messages"]
-            messages_str = ""
-            for message in messages:
-                messages_str += f"{message['role']}: {message['content']}\n"
-
-            span.set_attribute(f"{name}.messages", messages_str)
+            # capture the messages by index
+            for index, message in enumerate(kwargs["messages"]):
+                span.set_attribute(f"{name}.messages.{index}.role", message["role"])
+                span.set_attribute(f"{name}.messages.{index}.content", message["content"])
 
             response = wrapped(*args, **kwargs)
 

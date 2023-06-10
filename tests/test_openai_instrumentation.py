@@ -60,8 +60,12 @@ class TestOpenAIInstrumentation(TestBase):
         self.assertEqual(span.name, name)
         self.assertEqual(span.attributes[f"{name}.model"], "gpt-3.5-turbo")
         self.assertEqual(
-            span.attributes[f"{name}.messages"],
-            "user: tell me a joke about opentelemetry\n",
+            span.attributes[f"{name}.messages.0.role"],
+            "user",
+        )
+        self.assertEqual(
+            span.attributes[f"{name}.messages.0.content"],
+            "tell me a joke about opentelemetry",
         )
         self.assertEqual(span.attributes[f"{name}.temperature"], 0.0)
         self.assertEqual(span.attributes[f"{name}.top_p"], 1.0)

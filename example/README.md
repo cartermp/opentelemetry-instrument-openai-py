@@ -15,48 +15,16 @@ You will see a response like this:
 
 ```json
 {
-    "name": "HTTP POST",
-    "context": {
-        "trace_id": "0x972ad0fce08102c888e2813a3fa0e927",
-        "span_id": "0xa0d21a44d6704eec",
-        "trace_state": "[]"
-    },
-    "kind": "SpanKind.CLIENT",
-    "parent_id": "0xbf271dae7f8f92d4",
-    "start_time": "2023-06-10T17:54:29.606964Z",
-    "end_time": "2023-06-10T17:54:30.990708Z",
-    "status": {
-        "status_code": "UNSET"
-    },
-    "attributes": {
-        "http.method": "POST",
-        "http.url": "https://api.openai.com/v1/chat/completions",
-        "http.status_code": 200
-    },
-    "events": [],
-    "links": [],
-    "resource": {
-        "attributes": {
-            "telemetry.sdk.language": "python",
-            "telemetry.sdk.name": "opentelemetry",
-            "telemetry.sdk.version": "1.18.0",
-            "telemetry.auto.version": "0.39b0",
-            "service.name": "unknown_service"
-        },
-        "schema_url": ""
-    }
-}
-{
     "name": "openai.chat",
     "context": {
-        "trace_id": "0x972ad0fce08102c888e2813a3fa0e927",
-        "span_id": "0xbf271dae7f8f92d4",
+        "trace_id": "0xe87062cbe18067301d34cb87d09da4c7",
+        "span_id": "0x4dacd658adc7ee5d",
         "trace_state": "[]"
     },
     "kind": "SpanKind.INTERNAL",
     "parent_id": null,
-    "start_time": "2023-06-10T17:54:29.589859Z",
-    "end_time": "2023-06-10T17:54:30.995015Z",
+    "start_time": "2023-06-10T18:10:01.869155Z",
+    "end_time": "2023-06-10T18:10:03.030913Z",
     "status": {
         "status_code": "UNSET"
     },
@@ -72,16 +40,17 @@ You will see a response like this:
         "openai.chat.frequency_penalty": 0.0,
         "openai.chat.logit_bias": "",
         "openai.chat.name": "",
-        "openai.chat.messages": "user: Tell me a joke about opentelemetry\n",
-        "openai.chat.response.id": "chatcmpl-7Px5Bhbd1neL9Zqivfd9nYStycMDL",
+        "openai.chat.messages.0.role": "user",
+        "openai.chat.messages.0.content": "Tell me a joke about opentelemetry",
+        "openai.chat.response.id": "chatcmpl-7PxKEDOVgBHYQPxZqposuEU93SLbd",
         "openai.chat.response.object": "chat.completion",
-        "openai.chat.response.created": 1686419669,
+        "openai.chat.response.created": 1686420602,
         "openai.chat.response.choices.0.message.role": "assistant",
-        "openai.chat.response.choices.0.message.content": "Why was the developer always happy when working with OpenTelemetry? Because he could always trace his steps back to where he went wrong!",
+        "openai.chat.response.choices.0.message.content": "Why did Opentelemetry cross the road? To trace its steps!",
         "openai.chat.response.choices.0.finish_reason": "stop",
         "openai.chat.response.usage.prompt_tokens": 16,
-        "openai.chat.response.usage.completion_tokens": 27,
-        "openai.chat.response.usage.total_tokens": 43
+        "openai.chat.response.usage.completion_tokens": 14,
+        "openai.chat.response.usage.total_tokens": 30
     },
     "events": [],
     "links": [],
@@ -97,5 +66,3 @@ You will see a response like this:
     }
 }
 ```
-
-That's a trace with two spans!
