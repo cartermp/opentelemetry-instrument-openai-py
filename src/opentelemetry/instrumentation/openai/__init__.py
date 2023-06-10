@@ -22,10 +22,10 @@ Instrument all OpenAI client calls:
 .. code-block:: python
 
     import openai
-    from opentelemetry.instrumentation.openai import OpenAIInstrumentation
+    from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 
     # Enable instrumentation
-    OpenAIInstrumentation().instrument()
+    OpenAIInstrumentor().instrument()
 
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
