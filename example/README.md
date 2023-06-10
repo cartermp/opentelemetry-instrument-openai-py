@@ -66,3 +66,15 @@ You will see a response like this:
     }
 }
 ```
+
+To see it in honeycomb:
+
+```
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.honeycomb.io"
+export OTEL_SERVICE_NAME="your-service-name"
+poetry run opentelemetry-instrument python chat.py
+```
+
+And then you can query it and see a trace (in this case it's just one span so I'm not showing that):
+
+![](honeycomb-openai-query.png)

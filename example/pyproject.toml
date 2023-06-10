@@ -10,6 +10,7 @@ python = "^3.10"
 opentelemetry-instrument-openai = {path = "../", develop = true}
 opentelemetry-distro = "^0.39b0"
 python-dotenv = "^1.0.0"
+opentelemetry-exporter-otlp = "^1.18.0"
 
 
 [build-system]
