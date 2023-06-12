@@ -142,9 +142,7 @@ def _instrument_embedding(tracer: Tracer):
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
             print(kwargs)
             span.set_attribute(f"{name}.model", kwargs["model"])
-            span.set_attribute(
-                f"{name}.input_count", len(kwargs["input"])
-            )
+            span.set_attribute(f"{name}.input_count", len(kwargs["input"]))
             span.set_attribute(
                 f"{name}.user", kwargs["user"] if "user" in kwargs else ""
             )
@@ -152,15 +150,120 @@ def _instrument_embedding(tracer: Tracer):
             response = wrapped(*args, **kwargs)
 
             span.set_attribute(f"{name}.response.embeddings_count", len(response.data))
-            span.set_attribute(f"{name}.response.usage.prompt_tokens", response.usage.prompt_tokens)
-            span.set_attribute(f"{name}.response.usage.total_tokens", response.usage.total_tokens)
+            span.set_attribute(
+                f"{name}.response.usage.prompt_tokens", response.usage.prompt_tokens
+            )
+            span.set_attribute(
+                f"{name}.response.usage.total_tokens", response.usage.total_tokens
+            )
 
     wrapt.wrap_function_wrapper(openai.Embedding, "create", _instrumented_create)
+
+
+def _instrument_completions(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return
+
+        name = "openai.completion"
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
+            span.set_attribute(f"{name}.model", kwargs["model"])
+            if "prompt" in kwargs:
+                if type(kwargs["prompt"]) == str:
+                    span.set_attribute(f"{name}.prompt", kwargs["prompt"])
+                else:
+                    for index, prompt in enumerate(kwargs["prompt"]):
+                        span.set_attribute(f"{name}.prompt.{index}", prompt)
+            span.set_attribute(
+                f"{name}.suffix",
+                kwargs["suffix"] if "suffix" in kwargs else "",
+            )
+            span.set_attribute(
+                f"{name}.temperature",
+                kwargs["temperature"] if "temperature" in kwargs else 1.0,
+            )
+            span.set_attribute(
+                f"{name}.top_p", kwargs["top_p"] if "top_p" in kwargs else 1.0
+            )
+            span.set_attribute(f"{name}.n", kwargs["n"] if "n" in kwargs else 1)
+            span.set_attribute(
+                f"{name}.stream", kwargs["stream"] if "stream" in kwargs else False
+            )
+            # TODO: logprobs is optional, not a concept in otel?
+            span.set_attribute(
+                f"{name}.logprobs", kwargs["logprobs"] if "logprobs" in kwargs else -1
+            )
+            span.set_attribute(
+                f"{name}.echo", kwargs["echo"] if "echo" in kwargs else False
+            )
+            span.set_attribute(
+                f"{name}.stop", kwargs["stop"] if "stop" in kwargs else ""
+            )
+            span.set_attribute(
+                f"{name}.max_tokens",
+                kwargs["max_tokens"] if "max_tokens" in kwargs else math.inf,
+            )
+            span.set_attribute(
+                f"{name}.presence_penalty",
+                kwargs["presence_penalty"] if "presence_penalty" in kwargs else 0.0,
+            )
+            span.set_attribute(
+                f"{name}.frequency_penalty",
+                kwargs["frequency_penalty"] if "frequency_penalty" in kwargs else 0.0,
+            )
+            span.set_attribute(
+                f"{name}.best_of", kwargs["best_of"] if "best_of" in kwargs else 1
+            )
+            span.set_attribute(
+                f"{name}.logit_bias",
+                kwargs["logit_bias"] if "logit_bias" in kwargs else "",
+            )
+            span.set_attribute(
+                f"{name}.user", kwargs["user"] if "user" in kwargs else ""
+            )
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.id", response["id"])
+            span.set_attribute(f"{name}.response.object", response["object"])
+            span.set_attribute(f"{name}.response.created", response["created"])
+            for index, choice in enumerate(response["choices"]):
+                span.set_attribute(
+                    f"{name}.response.choices.{index}.text",
+                    choice["text"],
+                )
+                # TODO: logprobs is optional, not a concept in otel?
+                if choice["logprobs"] is not None:
+                    span.set_attribute(
+                        f"{name}.response.choices.{index}.logprobs",
+                        choice["logprobs"],
+                    )
+                span.set_attribute(
+                    f"{name}.response.choices.{index}.finish_reason",
+                    choice["finish_reason"],
+                )
+
+            span.set_attribute(
+                f"{name}.response.usage.prompt_tokens",
+                response["usage"]["prompt_tokens"],
+            )
+            span.set_attribute(
+                f"{name}.response.usage.completion_tokens",
+                response["usage"]["completion_tokens"],
+            )
+            span.set_attribute(
+                f"{name}.response.usage.total_tokens", response["usage"]["total_tokens"]
+            )
+
+        return response
+
+    wrapt.wrap_function_wrapper(openai.Completion, "create", _instrumented_create)
 
 
 def _uninstrument():
     unwrap(openai.ChatCompletion, "create")
     unwrap(openai.Embedding, "create")
+    unwrap(openai.Completion, "create")
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
@@ -174,6 +277,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         tracer = get_tracer(__name__, __version__, tracer_provider)
         _instrument_chat(tracer)
         _instrument_embedding(tracer)
+        _instrument_completions(tracer)
 
     def _uninstrument(self, **kwargs):
         _uninstrument()
