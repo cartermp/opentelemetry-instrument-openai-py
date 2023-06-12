@@ -29,7 +29,7 @@ class MockChatCompletion(EngineAPIResource):
 class MockEmbedding(EngineAPIResource):
     @classmethod
     def create(cls, *args, **kwargs):
-        data =  {
+        data = {
             "object": "list",
             "data": [
                 {
@@ -72,7 +72,7 @@ class TestOpenAIInstrumentation(TestBase):
             max_tokens=150,
             user="test",
         )
-    
+
     @mock.patch(
         "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
         new=MockChatCompletion.create,
@@ -165,4 +165,3 @@ class TestOpenAIInstrumentation(TestBase):
         )
 
         OpenAIInstrumentor().uninstrument()
-

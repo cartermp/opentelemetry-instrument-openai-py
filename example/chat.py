@@ -1,17 +1,24 @@
 import os
 import openai
 from dotenv import load_dotenv
+from opentelemetry import trace
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+
+OpenAIInstrumentor().instrument()
+tracer = trace.get_tracer("chat.demo")
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[{"role":"user", "content":"Tell me a joke about opentelemetry"}],
-)
+with tracer.start_as_current_span("chat") as span:
+    span.set_attribute("attr1", 12)
+    openai.Embedding.create(
+        model="text-embedding-ada-002",
+        input=["poop", "pee"],
+        user="test",
+    )
 
-openai.Embedding.create(
-    model="text-embedding-ada-002",
-    input=["poop","pee"],
-    user="test",
-)
+    openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": "Tell me a joke about opentelemetry"}],
+    )

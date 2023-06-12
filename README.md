@@ -28,7 +28,7 @@ import openai
 from dotenv import load_dotenv
 from opentelemetry.instrument.openai import OpenAIInstrumentor
 
-OpenAIInstrumentor.instrument()
+OpenAIInstrumentor().instrument()
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
