@@ -11,6 +11,7 @@ opentelemetry-instrument-openai = {path = "../", develop = true}
 opentelemetry-distro = "^0.39b0"
 python-dotenv = "^1.0.0"
 opentelemetry-exporter-otlp = "^1.18.0"
+numpy = "^1.24.3" # needed for embeddings
 
 
 [build-system]

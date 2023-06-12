@@ -7,8 +7,12 @@ Now:
 
 ```shell
 poetry install
-poetry run opentelemetry-bootstrap
-poetry run opentelemetry-instrument --traces_exporter console --metrics_exporter none --logs_exporter none python chat.py
+poetry run opentelemetry-bootstrap -a install
+poetry run opentelemetry-instrument \
+  --traces_exporter console \
+  --metrics_exporter none \
+  --logs_exporter none \
+  python chat.py
 ```
 
 You will see a response like this:

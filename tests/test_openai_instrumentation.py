@@ -26,8 +26,34 @@ class MockChatCompletion(EngineAPIResource):
         }
 
 
+class MockEmbedding(EngineAPIResource):
+    @classmethod
+    def create(cls, *args, **kwargs):
+        data =  {
+            "object": "list",
+            "data": [
+                {
+                    "object": "embedding",
+                    "embedding": [
+                        0.0023064255,
+                        -0.009327292,
+                        -0.0028842222,
+                        # Eliding 1536 other floats
+                    ],
+                    "index": 0,
+                }
+            ],
+            "model": "text-embedding-ada-002",
+            "usage": {
+                "prompt_tokens": 8,
+                "total_tokens": 8,
+            },
+        }
+        return type("Object", (), data)()
+
+
 class TestOpenAIInstrumentation(TestBase):
-    def assert_spans(self, num_spans: int):
+    def _assert_spans(self, num_spans: int):
         finished_spans = self.memory_exporter.get_finished_spans()
         self.assertEqual(num_spans, len(finished_spans))
         if num_spans == 0:
@@ -36,7 +62,7 @@ class TestOpenAIInstrumentation(TestBase):
             return finished_spans[0]
         return finished_spans
 
-    def call_chat(self):
+    def _call_chat(self):
         return openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -44,18 +70,18 @@ class TestOpenAIInstrumentation(TestBase):
             ],
             temperature=0.0,
             max_tokens=150,
-            name="test",
+            user="test",
         )
-
+    
     @mock.patch(
         "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
         new=MockChatCompletion.create,
     )
-    def test_instrument(self):
+    def test_instrument_chat(self):
         OpenAIInstrumentor().instrument()
-        result = self.call_chat()
+        result = self._call_chat()
 
-        span = self.assert_spans(1)
+        span = self._assert_spans(1)
         name = "openai.chat"
         self.assertEqual(span.name, name)
         self.assertEqual(span.attributes[f"{name}.model"], "gpt-3.5-turbo")
@@ -76,7 +102,7 @@ class TestOpenAIInstrumentation(TestBase):
         self.assertEqual(span.attributes[f"{name}.presence_penalty"], 0.0)
         self.assertEqual(span.attributes[f"{name}.frequency_penalty"], 0.0)
         self.assertEqual(span.attributes[f"{name}.logit_bias"], "")
-        self.assertEqual(span.attributes[f"{name}.name"], "test")
+        self.assertEqual(span.attributes[f"{name}.user"], "test")
 
         self.assertEqual(span.attributes[f"{name}.response.id"], result["id"])
         self.assertEqual(span.attributes[f"{name}.response.object"], result["object"])
@@ -106,15 +132,37 @@ class TestOpenAIInstrumentation(TestBase):
             result["usage"]["total_tokens"],
         )
 
+        OpenAIInstrumentor().uninstrument()
+
     @mock.patch(
         "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
-        new=MockChatCompletion.create,
+        new=MockEmbedding.create,
     )
-    def uninstrument(self):
-        OpenAIInstrumentor().uninstrument()
-        self.call_chat()
-        self.assert_spans(0)
-
+    def test_instrument_embedding(self):
         OpenAIInstrumentor().instrument()
-        self.call_chat()
-        self.assert_spans(1)
+        result = openai.Embedding.create(
+            model="text-embedding-ada-002",
+            input="The food was delicious and the waiter...",
+            user="test",
+        )
+
+        span = self._assert_spans(1)
+        name = "openai.embedding"
+        self.assertEqual(span.name, name)
+        self.assertEqual(span.attributes[f"{name}.model"], "text-embedding-ada-002")
+        self.assertEqual(span.attributes[f"{name}.input_count"], 40)
+        self.assertEqual(span.attributes[f"{name}.user"], "test")
+        self.assertEqual(
+            span.attributes[f"{name}.response.embeddings_count"], len(result.data)
+        )
+        self.assertEqual(
+            span.attributes[f"{name}.response.usage.promt_tokens"],
+            result.usage.prompt_token,
+        )
+        self.assertEqual(
+            span.attributes[f"{name}.response.usage.total_tokens"],
+            result.usage.total_tokens,
+        )
+
+        OpenAIInstrumentor().uninstrument()
+

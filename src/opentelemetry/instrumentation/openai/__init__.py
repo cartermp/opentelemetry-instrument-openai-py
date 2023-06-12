@@ -39,7 +39,7 @@ import wrapt
 import openai
 
 from opentelemetry import context as context_api
-from opentelemetry.trace import get_tracer, Tracer
+from opentelemetry.trace import get_tracer, Tracer, SpanKind
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.utils import (
@@ -56,7 +56,7 @@ def _instrument_chat(tracer: Tracer):
             return
 
         name = "openai.chat"
-        with tracer.start_as_current_span(name) as span:
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
             span.set_attribute(f"{name}.model", kwargs["model"])
             span.set_attribute(
                 f"{name}.temperature",
@@ -89,7 +89,7 @@ def _instrument_chat(tracer: Tracer):
                 kwargs["logit_bias"] if "logit_bias" in kwargs else "",
             )
             span.set_attribute(
-                f"{name}.name", kwargs["name"] if "name" in kwargs else ""
+                f"{name}.user", kwargs["user"] if "user" in kwargs else ""
             )
             for index, message in enumerate(kwargs["messages"]):
                 span.set_attribute(f"{name}.messages.{index}.role", message["role"])
@@ -133,8 +133,34 @@ def _instrument_chat(tracer: Tracer):
     wrapt.wrap_function_wrapper(openai.ChatCompletion, "create", _instrumented_create)
 
 
+def _instrument_embedding(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return
+
+        name = "openai.embedding"
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
+            print(kwargs)
+            span.set_attribute(f"{name}.model", kwargs["model"])
+            span.set_attribute(
+                f"{name}.input_count", len(kwargs["input"])
+            )
+            span.set_attribute(
+                f"{name}.user", kwargs["user"] if "user" in kwargs else ""
+            )
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.embeddings_count", len(response.data))
+            span.set_attribute(f"{name}.response.usage.prompt_tokens", response.usage.prompt_tokens)
+            span.set_attribute(f"{name}.response.usage.total_tokens", response.usage.total_tokens)
+
+    wrapt.wrap_function_wrapper(openai.Embedding, "create", _instrumented_create)
+
+
 def _uninstrument():
     unwrap(openai.ChatCompletion, "create")
+    unwrap(openai.Embedding, "create")
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
@@ -147,6 +173,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(__name__, __version__, tracer_provider)
         _instrument_chat(tracer)
+        _instrument_embedding(tracer)
 
     def _uninstrument(self, **kwargs):
         _uninstrument()

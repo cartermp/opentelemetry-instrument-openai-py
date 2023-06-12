@@ -2,6 +2,43 @@
 
 It's OpenTelemetry instrumentation (python) for OpenAI's library.
 
+## How to use it
+
+Simple! First, install this package.
+
+### Autoinstrumentation
+
+```
+opentelemetry-bootstrap -a install
+opentelemetry-instrument \
+  --traces_exporter console \
+  --metrics_exporter none \
+  --logs_exporter none \
+  python chat.py
+```
+
+If you're using poetry, put `poetry run` before each command.
+
+### In code
+
+It's one line of code too:
+
+```python
+import openai
+from dotenv import load_dotenv
+from opentelemetry.instrument.openai import OpenAIInstrumentor
+
+OpenAIInstrumentor.instrument()
+
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role":"user", "content":"Tell me a joke about opentelemetry"}],
+)
+```
+
 ## How to develop
 
 Get [poetry](https://python-poetry.org/). Python build and dependency management is fucked but this is about as good as it gets.
