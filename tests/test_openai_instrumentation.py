@@ -134,22 +134,29 @@ class MockModeration(EngineAPIResource):
                 }
             ],
         }
-    
+
+
 class MockImage(EngineAPIResource):
     @classmethod
     def create(cls, *args, **kwargs):
         return {
             "created": 1589478378,
-            "data": [
-                {
-                "url": "example.com"
-                },
-                {
-                "url": "gooddeals.com"
-                }
-            ]
+            "data": [{"url": "example.com"}, {"url": "gooddeals.com"}],
         }
 
+    @classmethod
+    def create_edit(cls, *args, **kwargs):
+        return {
+            "created": 1589478378,
+            "data": [{"url": "example.com"}, {"url": "gooddeals.com"}],
+        }
+
+    @classmethod
+    def create_variation(cls, *args, **kwargs):
+        return {
+            "created": 1589478378,
+            "data": [{"url": "example.com"}, {"url": "gooddeals.com"}],
+        }
 
 
 class TestOpenAIInstrumentation(TestBase):
@@ -475,22 +482,82 @@ class TestOpenAIInstrumentation(TestBase):
             OpenAIInstrumentor().instrument()
 
             result = openai.Image.create(
-                prompt= "A cute baby sea otter",
-                n = 2,
+                prompt="A cute baby sea otter",
+                n=2,
             )
 
             span = self._assert_spans(1)
 
             name = "openai.image.generate"
             self.assertEqual(span.name, name)
-            self.assertEqual(
-                span.attributes[f"{name}.prompt"], "A cute baby sea otter"
-            )
+            self.assertEqual(span.attributes[f"{name}.prompt"], "A cute baby sea otter")
             self.assertEqual(span.attributes[f"{name}.n"], 2)
             self.assertEqual(span.attributes[f"{name}.size"], "1024x1024")
+            self.assertEqual(span.attributes[f"{name}.response_format"], "url")
             self.assertEqual(
-                span.attributes[f"{name}.response_format"], "url"
+                span.attributes[f"{name}.response.created"], result["created"]
             )
+            self.assertEqual(
+                span.attributes[f"{name}.response.data.0.url"], result["data"][0]["url"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.data.1.url"], result["data"][1]["url"]
+            )
+
+            OpenAIInstrumentor().uninstrument()
+
+    def test_instrument_image_edit(self):
+        mock_image = create_autospec(openai.Image)
+        mock_image.create_edit = MockImage.create_edit
+        with mock.patch("openai.Image", new=mock_image):
+            OpenAIInstrumentor().instrument()
+
+            result = openai.Image.create_edit(
+                prompt="A cute baby sea otter",
+                image="@Otter.png",
+                n=2,
+            )
+
+            span = self._assert_spans(1)
+
+            name = "openai.image.edit"
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.prompt"], "A cute baby sea otter")
+            self.assertEqual(span.attributes[f"{name}.image"], "@Otter.png")
+            self.assertEqual(span.attributes[f"{name}.n"], 2)
+            self.assertEqual(span.attributes[f"{name}.size"], "1024x1024")
+            self.assertEqual(span.attributes[f"{name}.response_format"], "url")
+            self.assertEqual(
+                span.attributes[f"{name}.response.created"], result["created"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.data.0.url"], result["data"][0]["url"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.data.1.url"], result["data"][1]["url"]
+            )
+
+            OpenAIInstrumentor().uninstrument()
+
+    def test_instrument_image_variation(self):
+        mock_image = create_autospec(openai.Image)
+        mock_image.create_variation = MockImage.create_variation
+        with mock.patch("openai.Image", new=mock_image):
+            OpenAIInstrumentor().instrument()
+
+            result = openai.Image.create_variation(
+                image="@Otter.png",
+                n=2,
+            )
+
+            span = self._assert_spans(1)
+
+            name = "openai.image.variation"
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.image"], "@Otter.png")
+            self.assertEqual(span.attributes[f"{name}.n"], 2)
+            self.assertEqual(span.attributes[f"{name}.size"], "1024x1024")
+            self.assertEqual(span.attributes[f"{name}.response_format"], "url")
             self.assertEqual(
                 span.attributes[f"{name}.response.created"], result["created"]
             )
