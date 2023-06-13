@@ -2,9 +2,9 @@ import os
 import openai
 from dotenv import load_dotenv
 from opentelemetry import trace
-# from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 
-# OpenAIInstrumentor().instrument()
+OpenAIInstrumentor().instrument()
 tracer = trace.get_tracer("chat.demo")
 
 load_dotenv()

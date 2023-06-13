@@ -8,20 +8,7 @@ Pproject site: https://github.com/cartermp/opentelemetry-instrument-openai-py
 
 Simple! First, install this package.
 
-### Autoinstrumentation
-
-```
-opentelemetry-bootstrap -a install
-opentelemetry-instrument \
-  --traces_exporter console \
-  --metrics_exporter none \
-  --logs_exporter none \
-  python chat.py
-```
-
-If you're using poetry, put `poetry run` before each command.
-
-### In code
+### Usage
 
 It's one line of code too:
 
@@ -41,9 +28,20 @@ openai.ChatCompletion.create(
 )
 ```
 
+You can then run your app normally with your own opentelemetry initialization, or use the the autoinstrumentation agent (remove `poetry run` if you're not using poetry).
+
+```
+poetry run opentelemetry-bootstrap -a install
+poetry run opentelemetry-instrument \
+  --traces_exporter console \
+  --metrics_exporter none \
+  --logs_exporter none \
+  python chat.py
+```
+
 ## How to develop
 
-Get [poetry](https://python-poetry.org/). Python build and dependency management is fucked but this is about as good as it gets.
+Get [poetry](https://python-poetry.org/).
 
 Now install and run tests:
 
