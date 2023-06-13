@@ -134,6 +134,22 @@ class MockModeration(EngineAPIResource):
                 }
             ],
         }
+    
+class MockImage(EngineAPIResource):
+    @classmethod
+    def create(cls, *args, **kwargs):
+        return {
+            "created": 1589478378,
+            "data": [
+                {
+                "url": "example.com"
+                },
+                {
+                "url": "gooddeals.com"
+                }
+            ]
+        }
+
 
 
 class TestOpenAIInstrumentation(TestBase):
@@ -448,6 +464,41 @@ class TestOpenAIInstrumentation(TestBase):
             self.assertEqual(
                 span.attributes[f"{name}.response.results.flagged"],
                 result["results"][0]["flagged"],
+            )
+
+            OpenAIInstrumentor().uninstrument()
+
+    def test_instrument_image_generate(self):
+        mock_image = create_autospec(openai.Image)
+        mock_image.create = MockImage.create
+        with mock.patch("openai.Image", new=mock_image):
+            OpenAIInstrumentor().instrument()
+
+            result = openai.Image.create(
+                prompt= "A cute baby sea otter",
+                n = 2,
+            )
+
+            span = self._assert_spans(1)
+
+            name = "openai.image.generate"
+            self.assertEqual(span.name, name)
+            self.assertEqual(
+                span.attributes[f"{name}.prompt"], "A cute baby sea otter"
+            )
+            self.assertEqual(span.attributes[f"{name}.n"], 2)
+            self.assertEqual(span.attributes[f"{name}.size"], "1024x1024")
+            self.assertEqual(
+                span.attributes[f"{name}.response_format"], "url"
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.created"], result["created"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.data.0.url"], result["data"][0]["url"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.data.1.url"], result["data"][1]["url"]
             )
 
             OpenAIInstrumentor().uninstrument()

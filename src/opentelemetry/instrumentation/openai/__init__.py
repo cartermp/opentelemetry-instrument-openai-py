@@ -389,6 +389,31 @@ def _instrument_moderation(tracer: Tracer):
 
     wrapt.wrap_function_wrapper(openai.Moderation, "create", _instrumented_create)
 
+def _instrument_image_generate(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return
+
+        name = "openai.image.generate"
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
+            span.set_attribute(f"{name}.prompt", kwargs["prompt"])
+            span.set_attribute(f"{name}.n", kwargs["n"] if "n" in kwargs else 1)
+            span.set_attribute(f"{name}.size", kwargs["size"] if "size" in kwargs else "1024x1024")
+            span.set_attribute(f"{name}.response_format", kwargs["response_format"] if "response_format" in kwargs else "url")
+            span.set_attribute(f"{name}.user", kwargs["user"] if "user" in kwargs else "")
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.created", response["created"])
+            for index, choice in enumerate(response["data"]):
+                if "response_format" not in kwargs or kwargs["response_format"] == "url":
+                    span.set_attribute(f"{name}.response.data.{index}.url", choice["url"])
+                # Not going to instrument the b64_json response because it's huge
+
+        return response
+
+    wrapt.wrap_function_wrapper(openai.Image, "create", _instrumented_create)
+
 
 class OpenAIInstrumentor(BaseInstrumentor):
     """An instrumenter for OpenAI's client library."""
@@ -404,6 +429,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         _instrument_completions(tracer)
         _instrument_edit(tracer)
         _instrument_moderation(tracer)
+        _instrument_image_generate(tracer)
 
     def _uninstrument(self, **kwargs):
         unwrap(openai.ChatCompletion, "create")
@@ -411,3 +437,4 @@ class OpenAIInstrumentor(BaseInstrumentor):
         unwrap(openai.Completion, "create")
         unwrap(openai.Edit, "create")
         unwrap(openai.Moderation, "create")
+        unwrap(openai.Image, "create")
