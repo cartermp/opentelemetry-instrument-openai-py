@@ -72,7 +72,8 @@ class MockEmbedding(EngineAPIResource):
             },
         }
         return util.convert_to_openai_object(data)
-    
+
+
 class MockEdit(EngineAPIResource):
     @classmethod
     def create(cls, *args, **kwargs):
@@ -81,17 +82,44 @@ class MockEdit(EngineAPIResource):
             "created": 1589478378,
             "choices": [
                 {
-                "text": "What day of the week is it?",
-                "index": 0,
+                    "text": "What day of the week is it?",
+                    "index": 0,
                 }
             ],
-            "usage": {
-                "prompt_tokens": 25,
-                "completion_tokens": 32,
-                "total_tokens": 57
-            }
+            "usage": {"prompt_tokens": 25, "completion_tokens": 32, "total_tokens": 57},
         }
 
+
+class MockModeration(EngineAPIResource):
+    @classmethod
+    def create(cls, *args, **kwargs):
+        return {
+            "id": "modr-5MWoLO",
+            "model": "text-moderation-001",
+            "results": [
+                {
+                    "categories": {
+                        "hate": False,
+                        "hate/threatening": True,
+                        "self-harm": False,
+                        "sexual": False,
+                        "sexual/minors": False,
+                        "violence": True,
+                        "violence/graphic": False,
+                    },
+                    "category_scores": {
+                        "hate": 0.22714105248451233,
+                        "hate/threatening": 0.4132447838783264,
+                        "self-harm": 0.005232391878962517,
+                        "sexual": 0.01407341007143259,
+                        "sexual/minors": 0.0038522258400917053,
+                        "violence": 0.9223177433013916,
+                        "violence/graphic": 0.036865197122097015,
+                    },
+                    "flagged": True,
+                }
+            ],
+        }
 
 
 class TestOpenAIInstrumentation(TestBase):
@@ -126,7 +154,7 @@ class TestOpenAIInstrumentation(TestBase):
         mock_chat_completion.create = MockChatCompletion.create
         with mock.patch("openai.ChatCompletion", new=mock_chat_completion):
             OpenAIInstrumentor().instrument()
-            
+
             result = self._call_chat()
 
             span = self._assert_spans(1)
@@ -287,24 +315,131 @@ class TestOpenAIInstrumentation(TestBase):
         mock_edit.create = MockEdit.create
         with mock.patch("openai.Edit", new=mock_edit):
             OpenAIInstrumentor().instrument()
-            
+
             result = openai.Edit.create(
-                model = "text-davinci-edit-001",
-                input = "What day of the wek is it?",
-                instruction = "Fix the spelling mistakes.", 
+                model="text-davinci-edit-001",
+                input="What day of the wek is it?",
+                instruction="Fix the spelling mistakes.",
             )
 
             span = self._assert_spans(1)
             name = "openai.edit"
             self.assertEqual(span.name, name)
             self.assertEqual(span.attributes[f"{name}.model"], "text-davinci-edit-001")
-            self.assertEqual(span.attributes[f"{name}.input"], "What day of the wek is it?")
-            self.assertEqual(span.attributes[f"{name}.instruction"], "Fix the spelling mistakes.")
-            self.assertEqual(span.attributes[f"{name}.response.object"], result["object"])
-            self.assertEqual(span.attributes[f"{name}.response.created"], result["created"])
-            self.assertEqual(span.attributes[f"{name}.response.choices.0.text"], result["choices"][0]["text"])
-            self.assertEqual(span.attributes[f"{name}.response.usage.prompt_tokens"], result["usage"]["prompt_tokens"])
-            self.assertEqual(span.attributes[f"{name}.response.usage.completion_tokens"], result["usage"]["completion_tokens"])
-            self.assertEqual(span.attributes[f"{name}.response.usage.total_tokens"], result["usage"]["total_tokens"])
+            self.assertEqual(
+                span.attributes[f"{name}.input"], "What day of the wek is it?"
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.instruction"], "Fix the spelling mistakes."
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.object"], result["object"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.created"], result["created"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.choices.0.text"],
+                result["choices"][0]["text"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.prompt_tokens"],
+                result["usage"]["prompt_tokens"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.completion_tokens"],
+                result["usage"]["completion_tokens"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.total_tokens"],
+                result["usage"]["total_tokens"],
+            )
+
+            OpenAIInstrumentor().uninstrument()
+
+    def test_instrument_moderation(self):
+        mock_moderation = create_autospec(openai.Moderation)
+        mock_moderation.create = MockModeration.create
+        with mock.patch("openai.Moderation", new=mock_moderation):
+            OpenAIInstrumentor().instrument()
+
+            result = openai.Moderation.create(
+                model="text-moderation-latest",
+                input="I want to kill them.",
+            )
+
+            span = self._assert_spans(1)
+            name = "openai.moderation"
+
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.model"], "text-moderation-latest")
+            self.assertEqual(span.attributes[f"{name}.input"], "I want to kill them.")
+            self.assertEqual(span.attributes[f"{name}.response.id"], result["id"])
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.categories.hate"],
+                result["results"][0]["categories"]["hate"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.categories.hate/threatening"],
+                result["results"][0]["categories"]["hate/threatening"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.categories.self-harm"],
+                result["results"][0]["categories"]["self-harm"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.categories.sexual"],
+                result["results"][0]["categories"]["sexual"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.categories.sexual/minors"],
+                result["results"][0]["categories"]["sexual/minors"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.categories.violence"],
+                result["results"][0]["categories"]["violence"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.categories.violence/graphic"],
+                result["results"][0]["categories"]["violence/graphic"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.category_scores.hate"],
+                result["results"][0]["category_scores"]["hate"],
+            )
+            self.assertEqual(
+                span.attributes[
+                    f"{name}.response.results.category_scores.hate/threatening"
+                ],
+                result["results"][0]["category_scores"]["hate/threatening"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.category_scores.self-harm"],
+                result["results"][0]["category_scores"]["self-harm"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.category_scores.sexual"],
+                result["results"][0]["category_scores"]["sexual"],
+            )
+            self.assertEqual(
+                span.attributes[
+                    f"{name}.response.results.category_scores.sexual/minors"
+                ],
+                result["results"][0]["category_scores"]["sexual/minors"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.category_scores.violence"],
+                result["results"][0]["category_scores"]["violence"],
+            )
+            self.assertEqual(
+                span.attributes[
+                    f"{name}.response.results.category_scores.violence/graphic"
+                ],
+                result["results"][0]["category_scores"]["violence/graphic"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.results.flagged"],
+                result["results"][0]["flagged"],
+            )
 
             OpenAIInstrumentor().uninstrument()

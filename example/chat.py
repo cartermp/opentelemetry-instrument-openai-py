@@ -14,7 +14,7 @@ with tracer.start_as_current_span("example") as span:
     span.set_attribute("attr1", 12)
     openai.Embedding.create(
         model="text-embedding-ada-002",
-        input=["poop", "pee"],
+        input=["some text"],
         user="test",
     )
 
@@ -32,4 +32,9 @@ with tracer.start_as_current_span("example") as span:
         model="text-davinci-edit-001",
         input="What day of the wek is it?",
         instruction="Fix the spelling mistakes",
+    )
+
+    mod_response = openai.Moderation.create(
+        model="text-moderation-latest",
+        input=["This text shouldn't be flagged, right?"],
     )

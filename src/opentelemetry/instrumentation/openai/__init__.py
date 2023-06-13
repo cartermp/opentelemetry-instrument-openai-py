@@ -309,6 +309,87 @@ def _instrument_edit(tracer: Tracer):
     wrapt.wrap_function_wrapper(openai.Edit, "create", _instrumented_create)
 
 
+def _instrument_moderation(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return
+
+        name = "openai.moderation"
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
+            span.set_attribute(
+                f"{name}.model",
+                kwargs["model"] if "model" in kwargs else "text-moderation-latest",
+            )
+            span.set_attribute(f"{name}.input", kwargs["input"])
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.id", response["id"])
+            span.set_attribute(
+                f"{name}.response.results.categories.hate",
+                response["results"][0]["categories"]["hate"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.categories.hate/threatening",
+                response["results"][0]["categories"]["hate/threatening"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.categories.self-harm",
+                response["results"][0]["categories"]["self-harm"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.categories.sexual",
+                response["results"][0]["categories"]["sexual"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.categories.sexual/minors",
+                response["results"][0]["categories"]["sexual/minors"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.categories.violence",
+                response["results"][0]["categories"]["violence"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.categories.violence/graphic",
+                response["results"][0]["categories"]["violence/graphic"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.category_scores.hate",
+                response["results"][0]["category_scores"]["hate"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.category_scores.hate/threatening",
+                response["results"][0]["category_scores"]["hate/threatening"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.category_scores.self-harm",
+                response["results"][0]["category_scores"]["self-harm"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.category_scores.sexual",
+                response["results"][0]["category_scores"]["sexual"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.category_scores.sexual/minors",
+                response["results"][0]["category_scores"]["sexual/minors"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.category_scores.violence",
+                response["results"][0]["category_scores"]["violence"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.category_scores.violence/graphic",
+                response["results"][0]["category_scores"]["violence/graphic"],
+            )
+            span.set_attribute(
+                f"{name}.response.results.flagged", response["results"][0]["flagged"]
+            )
+
+        return response
+
+    wrapt.wrap_function_wrapper(openai.Moderation, "create", _instrumented_create)
+
+
 class OpenAIInstrumentor(BaseInstrumentor):
     """An instrumenter for OpenAI's client library."""
 
@@ -322,9 +403,11 @@ class OpenAIInstrumentor(BaseInstrumentor):
         _instrument_embedding(tracer)
         _instrument_completions(tracer)
         _instrument_edit(tracer)
+        _instrument_moderation(tracer)
 
     def _uninstrument(self, **kwargs):
         unwrap(openai.ChatCompletion, "create")
         unwrap(openai.Embedding, "create")
         unwrap(openai.Completion, "create")
         unwrap(openai.Edit, "create")
+        unwrap(openai.Moderation, "create")
