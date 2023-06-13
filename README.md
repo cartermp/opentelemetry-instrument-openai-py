@@ -2,7 +2,7 @@
 
 It's OpenTelemetry instrumentation (python) for OpenAI's library.
 
-Pproject site: https://github.com/cartermp/opentelemetry-instrument-openai-py
+Project site: https://github.com/cartermp/opentelemetry-instrument-openai-py
 
 ## How to use it
 
@@ -10,7 +10,15 @@ Simple! First, install this package.
 
 ### Usage
 
-It's one line of code too:
+With autoinstrumentation agent:
+
+```
+poetry add opentelemetry-instrument-openai
+poetry run opentelemetry-bootstrap -a install
+poetry run opentelemetry-instrument python your_app.py
+```
+
+If you prefer to do it in code, you can do that too:
 
 ```python
 import openai
@@ -28,16 +36,7 @@ openai.ChatCompletion.create(
 )
 ```
 
-You can then run your app normally with your own opentelemetry initialization, or use the the autoinstrumentation agent (remove `poetry run` if you're not using poetry).
-
-```
-poetry run opentelemetry-bootstrap -a install
-poetry run opentelemetry-instrument \
-  --traces_exporter console \
-  --metrics_exporter none \
-  --logs_exporter none \
-  python chat.py
-```
+You can then run your app normally with your own opentelemetry initialization.
 
 ## How to develop
 

@@ -2,9 +2,12 @@ import os
 import openai
 from dotenv import load_dotenv
 from opentelemetry import trace
-from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 
-OpenAIInstrumentor().instrument()
+# If you don't want to use full autoinstrumentation, just add this:
+#
+# from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+# OpenAIInstrumentor().instrument()
+
 tracer = trace.get_tracer("chat.demo")
 
 load_dotenv()

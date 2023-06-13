@@ -727,6 +727,28 @@ requests = ">=2.7,<3.0"
 test = ["responses (==0.22.0)"]
 
 [[package]]
+name = "opentelemetry-instrument-openai"
+version = "0.3.0"
+description = "OpenTelemetry openai instrumentation"
+optional = false
+python-versions = ">=3.7.1,<4.0"
+files = []
+develop = true
+
+[package.dependencies]
+opentelemetry-api = "~=1.18.0"
+opentelemetry-instrumentation = "~=0.39b0"
+opentelemetry-semantic-conventions = "~=0.39b0"
+wrapt = "^1.15.0"
+
+[package.extras]
+instruments = ["openai (>=0.27.8,<0.28.0)"]
+
+[package.source]
+type = "directory"
+url = ".."
+
+[[package]]
 name = "opentelemetry-instrumentation"
 version = "0.39b0"
 description = "Instrumentation Tools & Auto Instrumentation for OpenTelemetry Python"
@@ -1094,4 +1116,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "100d7a8f9e001269835f57c7fbfcd53f738bb675f429d4010d296a227e07a3fb"
+content-hash = "63555bb74738a6586a135b507961298b90d8dbab6c62d43b6d2a489ec66e4167"
