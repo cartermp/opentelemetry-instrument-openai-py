@@ -508,6 +508,69 @@ def _instrument_image_variation(tracer: Tracer):
     wrapt.wrap_function_wrapper(openai.Image, "create_variation", _instrumented_create)
 
 
+def _instrument_audio_transcription(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return
+
+        name = "openai.audio.transcribe"
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
+            span.set_attribute(f"{name}.file", kwargs["file"])
+            span.set_attribute(f"{name}.model", kwargs["model"])
+            span.set_attribute(
+                f"{name}.prompt", kwargs["prompt"] if "prompt" in kwargs else ""
+            )
+            span.set_attribute(
+                f"{name}.response_format",
+                kwargs["response_format"] if "response_format" in kwargs else "json",
+            )
+            span.set_attribute(
+                f"{name}.temperature",
+                kwargs["temperature"] if "temperature" in kwargs else 0.0,
+            )
+            span.set_attribute(
+                f"{name}.language", kwargs["language"] if "language" in kwargs else ""
+            )
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.text", response["text"])
+
+        return response
+
+    wrapt.wrap_function_wrapper(openai.Audio, "transcribe", _instrumented_create)
+
+
+def _instrument_audio_translate(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return
+
+        name = "openai.audio.translate"
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
+            span.set_attribute(f"{name}.file", kwargs["file"])
+            span.set_attribute(f"{name}.model", kwargs["model"])
+            span.set_attribute(
+                f"{name}.prompt", kwargs["prompt"] if "prompt" in kwargs else ""
+            )
+            span.set_attribute(
+                f"{name}.response_format",
+                kwargs["response_format"] if "response_format" in kwargs else "json",
+            )
+            span.set_attribute(
+                f"{name}.temperature",
+                kwargs["temperature"] if "temperature" in kwargs else 0.0,
+            )
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.text", response["text"])
+
+        return response
+
+    wrapt.wrap_function_wrapper(openai.Audio, "translate", _instrumented_create)
+
+
 class OpenAIInstrumentor(BaseInstrumentor):
     """An instrumenter for OpenAI's client library."""
 
@@ -525,6 +588,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
         _instrument_image_generate(tracer)
         _instrument_image_edit(tracer)
         _instrument_image_variation(tracer)
+        _instrument_audio_transcription(tracer)
+        _instrument_audio_translate(tracer)
 
     def _uninstrument(self, **kwargs):
         unwrap(openai.ChatCompletion, "create")
@@ -535,3 +600,5 @@ class OpenAIInstrumentor(BaseInstrumentor):
         unwrap(openai.Image, "create")
         unwrap(openai.Image, "create_edit")
         unwrap(openai.Image, "create_variation")
+        unwrap(openai.Audio, "transcribe")
+        unwrap(openai.Audio, "translate")

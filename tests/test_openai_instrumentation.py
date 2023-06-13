@@ -159,6 +159,20 @@ class MockImage(EngineAPIResource):
         }
 
 
+class MockAudio(EngineAPIResource):
+    @classmethod
+    def transcribe(cls, *args, **kwargs):
+        return {
+            "text": "It's 'a me, Mario!",
+        }
+
+    @classmethod
+    def translate(cls, *args, **kwargs):
+        return {
+            "text": "It's 'a me, Mario!",
+        }
+
+
 class TestOpenAIInstrumentation(TestBase):
     def _assert_spans(self, num_spans: int):
         finished_spans = self.memory_exporter.get_finished_spans()
@@ -567,5 +581,54 @@ class TestOpenAIInstrumentation(TestBase):
             self.assertEqual(
                 span.attributes[f"{name}.response.data.1.url"], result["data"][1]["url"]
             )
+
+            OpenAIInstrumentor().uninstrument()
+
+    def test_instrument_audio_transcribe(self):
+        mock_audio = create_autospec(openai.Audio)
+        mock_audio.transcribe = MockAudio.transcribe
+        with mock.patch("openai.Audio", new=mock_audio):
+            OpenAIInstrumentor().instrument()
+
+            result = openai.Audio.transcribe(
+                file="audio.mp3",
+                model="whisper-1",
+            )
+
+            span = self._assert_spans(1)
+
+            name = "openai.audio.transcribe"
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.file"], "audio.mp3")
+            self.assertEqual(span.attributes[f"{name}.model"], "whisper-1")
+            self.assertEqual(span.attributes[f"{name}.prompt"], "")
+            self.assertEqual(span.attributes[f"{name}.response_format"], "json")
+            self.assertEqual(span.attributes[f"{name}.temperature"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.language"], "")
+            self.assertEqual(span.attributes[f"{name}.response.text"], result["text"])
+
+            OpenAIInstrumentor().uninstrument()
+
+    def test_instrument_audio_translate(self):
+        mock_audio = create_autospec(openai.Audio)
+        mock_audio.translate = MockAudio.translate
+        with mock.patch("openai.Audio", new=mock_audio):
+            OpenAIInstrumentor().instrument()
+
+            result = openai.Audio.translate(
+                file="german.m4a",
+                model="whisper-1",
+            )
+
+            span = self._assert_spans(1)
+
+            name = "openai.audio.translate"
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.file"], "german.m4a")
+            self.assertEqual(span.attributes[f"{name}.model"], "whisper-1")
+            self.assertEqual(span.attributes[f"{name}.prompt"], "")
+            self.assertEqual(span.attributes[f"{name}.response_format"], "json")
+            self.assertEqual(span.attributes[f"{name}.temperature"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.response.text"], result["text"])
 
             OpenAIInstrumentor().uninstrument()

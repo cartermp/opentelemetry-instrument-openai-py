@@ -10,6 +10,7 @@ Supported APIs:
 - [x] Embeddings
 - [x] Moderation
 - [x] Image (generation, edit, variation)
+- [x] Audio (transcribe, translate)
 - [x] Completion (GPT-3)
 - [x] Edit (GPT-3)
 
