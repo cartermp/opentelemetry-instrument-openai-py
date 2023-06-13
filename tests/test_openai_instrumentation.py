@@ -157,12 +157,6 @@ class TestOpenAIInstrumentation(TestBase):
             user="test",
         )
 
-    # @mock.patch(
-    #     # "openai.api_resources.abstract.engine_api_resource.EngineAPIResource.create",
-    #     "openai.ChatCompletion.create",
-    #     autospec=True,
-    #     # new_callable=MockChatCompletion.create,
-    # )
     def test_instrument_chat(self):
         mock_chat_completion = create_autospec(openai.ChatCompletion)
         mock_chat_completion.create = MockChatCompletion.create
