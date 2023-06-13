@@ -2,6 +2,8 @@
 
 It's OpenTelemetry instrumentation (python) for OpenAI's library.
 
+Pproject site: https://github.com/cartermp/opentelemetry-instrument-openai-py
+
 ## How to use it
 
 Simple! First, install this package.

@@ -10,7 +10,7 @@ tracer = trace.get_tracer("chat.demo")
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-with tracer.start_as_current_span("chat") as span:
+with tracer.start_as_current_span("example") as span:
     span.set_attribute("attr1", 12)
     openai.Embedding.create(
         model="text-embedding-ada-002",
@@ -21,4 +21,15 @@ with tracer.start_as_current_span("chat") as span:
     openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": "Tell me a joke about opentelemetry"}],
+    )
+
+    openai.Completion.create(
+        model="text-davinci-003",
+        prompt="Tell me a joke about opentelemetry",
+    )
+
+    openai.Edit.create(
+        model="text-davinci-edit-001",
+        input="What day of the wek is it?",
+        instruction="Fix the spelling mistakes",
     )

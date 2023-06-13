@@ -190,9 +190,11 @@ def _instrument_completions(tracer: Tracer):
                 f"{name}.stream", kwargs["stream"] if "stream" in kwargs else False
             )
             # TODO: logprobs is optional, not a concept in otel?
-            span.set_attribute(
-                f"{name}.logprobs", kwargs["logprobs"] if "logprobs" in kwargs else -1
-            )
+            if "logprobs" in kwargs and kwargs["logprobs"] is not None:
+                span.set_attribute(
+                    f"{name}.logprobs",
+                    kwargs["logprobs"] if "logprobs" in kwargs else -1,
+                )
             span.set_attribute(
                 f"{name}.echo", kwargs["echo"] if "echo" in kwargs else False
             )
@@ -260,10 +262,51 @@ def _instrument_completions(tracer: Tracer):
     wrapt.wrap_function_wrapper(openai.Completion, "create", _instrumented_create)
 
 
-def _uninstrument():
-    unwrap(openai.ChatCompletion, "create")
-    unwrap(openai.Embedding, "create")
-    unwrap(openai.Completion, "create")
+def _instrument_edit(tracer: Tracer):
+    def _instrumented_create(wrapped, instance, args, kwargs):
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return
+
+        name = "openai.edit"
+        with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
+            span.set_attribute(f"{name}.model", kwargs["model"])
+            span.set_attribute(f"{name}.instruction", kwargs["instruction"])
+            span.set_attribute(
+                f"{name}.input", kwargs["input"] if "input" in kwargs else ""
+            )
+            span.set_attribute(f"{name}.n", kwargs["n"] if "n" in kwargs else 1)
+            span.set_attribute(
+                f"{name}.temperature",
+                kwargs["temperature"] if "temperature" in kwargs else 1.0,
+            )
+            span.set_attribute(
+                f"{name}.top_p", kwargs["top_p"] if "top_p" in kwargs else 1.0
+            )
+
+            response = wrapped(*args, **kwargs)
+
+            span.set_attribute(f"{name}.response.object", response["object"])
+            span.set_attribute(f"{name}.response.created", response["created"])
+            for index, choice in enumerate(response["choices"]):
+                span.set_attribute(
+                    f"{name}.response.choices.{index}.text", choice["text"]
+                )
+
+            span.set_attribute(
+                f"{name}.response.usage.prompt_tokens",
+                response["usage"]["prompt_tokens"],
+            )
+            span.set_attribute(
+                f"{name}.response.usage.completion_tokens",
+                response["usage"]["completion_tokens"],
+            )
+            span.set_attribute(
+                f"{name}.response.usage.total_tokens", response["usage"]["total_tokens"]
+            )
+
+        return response
+
+    wrapt.wrap_function_wrapper(openai.Edit, "create", _instrumented_create)
 
 
 class OpenAIInstrumentor(BaseInstrumentor):
@@ -278,6 +321,10 @@ class OpenAIInstrumentor(BaseInstrumentor):
         _instrument_chat(tracer)
         _instrument_embedding(tracer)
         _instrument_completions(tracer)
+        _instrument_edit(tracer)
 
     def _uninstrument(self, **kwargs):
-        _uninstrument()
+        unwrap(openai.ChatCompletion, "create")
+        unwrap(openai.Embedding, "create")
+        unwrap(openai.Completion, "create")
+        unwrap(openai.Edit, "create")

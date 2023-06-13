@@ -72,6 +72,26 @@ class MockEmbedding(EngineAPIResource):
             },
         }
         return util.convert_to_openai_object(data)
+    
+class MockEdit(EngineAPIResource):
+    @classmethod
+    def create(cls, *args, **kwargs):
+        return {
+            "object": "edit",
+            "created": 1589478378,
+            "choices": [
+                {
+                "text": "What day of the week is it?",
+                "index": 0,
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 25,
+                "completion_tokens": 32,
+                "total_tokens": 57
+            }
+        }
+
 
 
 class TestOpenAIInstrumentation(TestBase):
@@ -106,6 +126,7 @@ class TestOpenAIInstrumentation(TestBase):
         mock_chat_completion.create = MockChatCompletion.create
         with mock.patch("openai.ChatCompletion", new=mock_chat_completion):
             OpenAIInstrumentor().instrument()
+            
             result = self._call_chat()
 
             span = self._assert_spans(1)
@@ -170,6 +191,7 @@ class TestOpenAIInstrumentation(TestBase):
         mock_completion.create = MockCompletion.create
         with mock.patch("openai.Completion", new=mock_completion):
             OpenAIInstrumentor().instrument()
+
             result = openai.Completion.create(
                 model="text-davinci-003",
                 prompt="tell me a joke about opentelemetry",
@@ -230,6 +252,7 @@ class TestOpenAIInstrumentation(TestBase):
         mock_embedding.create = MockEmbedding.create
         with mock.patch("openai.Embedding", new=mock_embedding):
             OpenAIInstrumentor().instrument()
+
             result = openai.Embedding.create(
                 model="text-embedding-ada-002",
                 input="The food was delicious and the waiter...",
@@ -256,5 +279,32 @@ class TestOpenAIInstrumentation(TestBase):
             #     span.attributes[f"{name}.response.usage.total_tokens"],
             #     result.usage.total_tokens,
             # )
+
+            OpenAIInstrumentor().uninstrument()
+
+    def test_instrument_edit(self):
+        mock_edit = create_autospec(openai.Edit)
+        mock_edit.create = MockEdit.create
+        with mock.patch("openai.Edit", new=mock_edit):
+            OpenAIInstrumentor().instrument()
+            
+            result = openai.Edit.create(
+                model = "text-davinci-edit-001",
+                input = "What day of the wek is it?",
+                instruction = "Fix the spelling mistakes.", 
+            )
+
+            span = self._assert_spans(1)
+            name = "openai.edit"
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.model"], "text-davinci-edit-001")
+            self.assertEqual(span.attributes[f"{name}.input"], "What day of the wek is it?")
+            self.assertEqual(span.attributes[f"{name}.instruction"], "Fix the spelling mistakes.")
+            self.assertEqual(span.attributes[f"{name}.response.object"], result["object"])
+            self.assertEqual(span.attributes[f"{name}.response.created"], result["created"])
+            self.assertEqual(span.attributes[f"{name}.response.choices.0.text"], result["choices"][0]["text"])
+            self.assertEqual(span.attributes[f"{name}.response.usage.prompt_tokens"], result["usage"]["prompt_tokens"])
+            self.assertEqual(span.attributes[f"{name}.response.usage.completion_tokens"], result["usage"]["completion_tokens"])
+            self.assertEqual(span.attributes[f"{name}.response.usage.total_tokens"], result["usage"]["total_tokens"])
 
             OpenAIInstrumentor().uninstrument()
