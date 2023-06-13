@@ -4,6 +4,15 @@ It's OpenTelemetry instrumentation (python) for OpenAI's library.
 
 Project site: https://github.com/cartermp/opentelemetry-instrument-openai-py
 
+Supported APIs:
+
+- [x] Chat
+- [x] Embeddings
+- [x] Moderation
+- [x] Image (generation, edit, variation)
+- [x] Completion (GPT-3)
+- [x] Edit (GPT-3)
+
 ## How to use it
 
 Simple! First, install this package.
