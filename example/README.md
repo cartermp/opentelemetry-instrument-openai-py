@@ -1,6 +1,6 @@
 How to run:
 
-1. Reame `env.example` to `.env`
+1. Rename `env.example` to `.env`
 2. Put your openai API key in there
 
 Now:
