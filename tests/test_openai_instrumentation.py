@@ -183,6 +183,20 @@ class TestOpenAIInstrumentation(TestBase):
             return finished_spans[0]
         return finished_spans
 
+    def _assert_api_attributes(self, span):
+        self.assertEqual(
+            span.attributes["openai.api_base"],
+            "https://api.openai.com/v1",
+        )
+        self.assertEqual(
+            span.attributes["openai.api_type"],
+            "open_ai",
+        )
+        self.assertEqual(
+            span.attributes["openai.api_version"],
+            "None",
+        )
+
     def _call_chat(self):
         return openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -256,6 +270,8 @@ class TestOpenAIInstrumentation(TestBase):
                 span.attributes[f"{name}.response.usage.total_tokens"],
                 result["usage"]["total_tokens"],
             )
+            
+            self._assert_api_attributes(span)
 
             OpenAIInstrumentor().uninstrument()
 
@@ -318,6 +334,8 @@ class TestOpenAIInstrumentation(TestBase):
                 result["usage"]["total_tokens"],
             )
 
+            self._assert_api_attributes(span)
+
             OpenAIInstrumentor().uninstrument()
 
     def test_instrument_embedding(self):
@@ -352,6 +370,8 @@ class TestOpenAIInstrumentation(TestBase):
             #     span.attributes[f"{name}.response.usage.total_tokens"],
             #     result.usage.total_tokens,
             # )
+            
+            self._assert_api_attributes(span)
 
             OpenAIInstrumentor().uninstrument()
 
@@ -399,6 +419,8 @@ class TestOpenAIInstrumentation(TestBase):
                 span.attributes[f"{name}.response.usage.total_tokens"],
                 result["usage"]["total_tokens"],
             )
+
+            self._assert_api_attributes(span)
 
             OpenAIInstrumentor().uninstrument()
 
@@ -487,6 +509,8 @@ class TestOpenAIInstrumentation(TestBase):
                 result["results"][0]["flagged"],
             )
 
+            self._assert_api_attributes(span)
+
             OpenAIInstrumentor().uninstrument()
 
     def test_instrument_image_generate(self):
@@ -517,6 +541,8 @@ class TestOpenAIInstrumentation(TestBase):
             self.assertEqual(
                 span.attributes[f"{name}.response.data.1.url"], result["data"][1]["url"]
             )
+
+            self._assert_api_attributes(span)
 
             OpenAIInstrumentor().uninstrument()
 
@@ -551,6 +577,8 @@ class TestOpenAIInstrumentation(TestBase):
                 span.attributes[f"{name}.response.data.1.url"], result["data"][1]["url"]
             )
 
+            self._assert_api_attributes(span)
+
             OpenAIInstrumentor().uninstrument()
 
     def test_instrument_image_variation(self):
@@ -582,6 +610,8 @@ class TestOpenAIInstrumentation(TestBase):
                 span.attributes[f"{name}.response.data.1.url"], result["data"][1]["url"]
             )
 
+            self._assert_api_attributes(span)
+
             OpenAIInstrumentor().uninstrument()
 
     def test_instrument_audio_transcribe(self):
@@ -607,6 +637,8 @@ class TestOpenAIInstrumentation(TestBase):
             self.assertEqual(span.attributes[f"{name}.language"], "")
             self.assertEqual(span.attributes[f"{name}.response.text"], result["text"])
 
+            self._assert_api_attributes(span)
+
             OpenAIInstrumentor().uninstrument()
 
     def test_instrument_audio_translate(self):
@@ -630,5 +662,7 @@ class TestOpenAIInstrumentation(TestBase):
             self.assertEqual(span.attributes[f"{name}.response_format"], "json")
             self.assertEqual(span.attributes[f"{name}.temperature"], 0.0)
             self.assertEqual(span.attributes[f"{name}.response.text"], result["text"])
+
+            self._assert_api_attributes(span)
 
             OpenAIInstrumentor().uninstrument()
