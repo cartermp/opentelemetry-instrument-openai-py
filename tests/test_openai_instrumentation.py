@@ -421,69 +421,69 @@ class TestOpenAIInstrumentation(TestBase):
             self.assertEqual(span.attributes[f"{name}.input"], "I want to kill them.")
             self.assertEqual(span.attributes[f"{name}.response.id"], result["id"])
             self.assertEqual(
-                span.attributes[f"{name}.response.results.categories.hate"],
+                span.attributes[f"{name}.response.results.0.categories.hate"],
                 result["results"][0]["categories"]["hate"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.categories.hate/threatening"],
+                span.attributes[f"{name}.response.results.0.categories.hate/threatening"],
                 result["results"][0]["categories"]["hate/threatening"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.categories.self-harm"],
+                span.attributes[f"{name}.response.results.0.categories.self-harm"],
                 result["results"][0]["categories"]["self-harm"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.categories.sexual"],
+                span.attributes[f"{name}.response.results.0.categories.sexual"],
                 result["results"][0]["categories"]["sexual"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.categories.sexual/minors"],
+                span.attributes[f"{name}.response.results.0.categories.sexual/minors"],
                 result["results"][0]["categories"]["sexual/minors"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.categories.violence"],
+                span.attributes[f"{name}.response.results.0.categories.violence"],
                 result["results"][0]["categories"]["violence"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.categories.violence/graphic"],
+                span.attributes[f"{name}.response.results.0.categories.violence/graphic"],
                 result["results"][0]["categories"]["violence/graphic"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.category_scores.hate"],
+                span.attributes[f"{name}.response.results.0.category_scores.hate"],
                 result["results"][0]["category_scores"]["hate"],
             )
             self.assertEqual(
                 span.attributes[
-                    f"{name}.response.results.category_scores.hate/threatening"
+                    f"{name}.response.results.0.category_scores.hate/threatening"
                 ],
                 result["results"][0]["category_scores"]["hate/threatening"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.category_scores.self-harm"],
+                span.attributes[f"{name}.response.results.0.category_scores.self-harm"],
                 result["results"][0]["category_scores"]["self-harm"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.category_scores.sexual"],
+                span.attributes[f"{name}.response.results.0.category_scores.sexual"],
                 result["results"][0]["category_scores"]["sexual"],
             )
             self.assertEqual(
                 span.attributes[
-                    f"{name}.response.results.category_scores.sexual/minors"
+                    f"{name}.response.results.0.category_scores.sexual/minors"
                 ],
                 result["results"][0]["category_scores"]["sexual/minors"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.category_scores.violence"],
+                span.attributes[f"{name}.response.results.0.category_scores.violence"],
                 result["results"][0]["category_scores"]["violence"],
             )
             self.assertEqual(
                 span.attributes[
-                    f"{name}.response.results.category_scores.violence/graphic"
+                    f"{name}.response.results.0.category_scores.violence/graphic"
                 ],
                 result["results"][0]["category_scores"]["violence/graphic"],
             )
             self.assertEqual(
-                span.attributes[f"{name}.response.results.flagged"],
+                span.attributes[f"{name}.response.results.0.flagged"],
                 result["results"][0]["flagged"],
             )
 
