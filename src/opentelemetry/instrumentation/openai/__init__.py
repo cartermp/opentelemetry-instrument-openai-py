@@ -53,7 +53,7 @@ from opentelemetry.instrumentation.openai.version import __version__
 def _instrument_chat(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.chat"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
