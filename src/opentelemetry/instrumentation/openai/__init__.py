@@ -136,7 +136,7 @@ def _instrument_chat(tracer: Tracer):
 def _instrument_embedding(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.embedding"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
@@ -163,7 +163,7 @@ def _instrument_embedding(tracer: Tracer):
 def _instrument_completions(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.completion"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
@@ -265,7 +265,7 @@ def _instrument_completions(tracer: Tracer):
 def _instrument_edit(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.edit"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
@@ -312,7 +312,7 @@ def _instrument_edit(tracer: Tracer):
 def _instrument_moderation(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.moderation"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
@@ -393,7 +393,7 @@ def _instrument_moderation(tracer: Tracer):
 def _instrument_image_generate(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.image.generate"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
@@ -473,7 +473,7 @@ def _instrument_image_edit(tracer: Tracer):
 def _instrument_image_variation(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.image.variation"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
@@ -511,7 +511,7 @@ def _instrument_image_variation(tracer: Tracer):
 def _instrument_audio_transcription(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.audio.transcribe"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
@@ -544,7 +544,7 @@ def _instrument_audio_transcription(tracer: Tracer):
 def _instrument_audio_translate(tracer: Tracer):
     def _instrumented_create(wrapped, instance, args, kwargs):
         if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
-            return
+            return wrapped(*args, **kwargs)
 
         name = "openai.audio.translate"
         with tracer.start_as_current_span(name, kind=SpanKind.CLIENT) as span:
