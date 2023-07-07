@@ -332,6 +332,14 @@ def _set_response_attributes(span, name, response):
     return
 
 
+def _set_api_attributes(span):
+    """Capture attributes about the api endpoint."""
+    span.set_attribute("openai.api_base", no_none(openai.api_base))
+    span.set_attribute("openai.api_type", no_none(openai.api_type))
+    span.set_attribute("openai.api_version", no_none(openai.api_version))
+    return
+
+
 def _with_tracer_wrapper(func):
     """Helper for providing tracer for wrapper functions."""
 
@@ -358,6 +366,8 @@ def _wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
     with tracer.start_as_current_span(
         name, kind=SpanKind.CLIENT, attributes={}
     ) as span:
+        if span.is_recording():
+            _set_api_attributes(span)
         try:
             if span.is_recording():
                 _set_input_attributes(span, name, to_wrap, kwargs)
@@ -372,14 +382,16 @@ def _wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
 
         if response:
             try:
-                _set_response_attributes(span, name, response)
+                if span.is_recording():
+                    _set_response_attributes(span, name, response)
 
             except Exception as ex:  # pylint: disable=broad-except
                 logger.warning(
                     "Failed to set response attributes for openai span, error: %s", 
                     str(ex)
                 )
-            span.set_status(Status(StatusCode.OK))
+            if span.is_recording():
+                span.set_status(Status(StatusCode.OK))
             
         return response
 
