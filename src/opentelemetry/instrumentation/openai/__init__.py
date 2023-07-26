@@ -273,7 +273,7 @@ def _set_input_attributes(span, name, to_wrap, kwargs):
     return
 
 
-def _set_response_attributes(span, name, response):
+def _set_response_attributes(span, name, response, suppress_message_content):
     """
     Captures response fields as span attributes. 
     Unpacks 'choices', 'usage', and 'results' fields to separate attributes.
@@ -286,7 +286,7 @@ def _set_response_attributes(span, name, response):
     # "data" fields can be very large, so we handle them specially 
     # depending on which api object they belong to. 
     resp_data = resp_attributes.pop("data", None)
-    if resp_data:
+    if resp_data and not suppress_message_content:
         if name in ["openai.embedding"]:
             # data values for Embedding objects can be too
             # long so for that we only capture len(data)
@@ -307,20 +307,21 @@ def _set_response_attributes(span, name, response):
 
     # set attributes from response fields nested under arrays 
     # {choices[], results[]}
-    _set_attributes_from_array(
-        span=span,
-        name=f"{name}.response",
-        attributes=resp_attributes,
-        array_field="choices",
-        nestings=["message"]
-    )
-    _set_attributes_from_array(
-        span=span,
-        name=f"{name}.response",
-        attributes=resp_attributes,
-        array_field="results",
-        nestings=["categories", "category_scores"]
-    )
+    if not suppress_message_content:
+        _set_attributes_from_array(
+            span=span,
+            name=f"{name}.response",
+            attributes=resp_attributes,
+            array_field="choices",
+            nestings=["message"]
+        )
+        _set_attributes_from_array(
+            span=span,
+            name=f"{name}.response",
+            attributes=resp_attributes,
+            array_field="results",
+            nestings=["categories", "category_scores"]
+        )
 
     # set attributes from remaining response fields
     _set_attributes(
@@ -343,13 +344,13 @@ def _set_api_attributes(span):
 def _with_tracer_wrapper(func):
     """Helper for providing tracer for wrapper functions."""
 
-    def _with_tracer(tracer, to_wrap):
+    def _with_tracer(tracer, to_wrap, suppress_message_content):
         def wrapper(wrapped, instance, args, kwargs):
             # prevent double wrapping
             if hasattr(wrapped, "__wrapped__"):
                 return wrapped(*args, **kwargs)
 
-            return func(tracer, to_wrap, wrapped, instance, args, kwargs)
+            return func(tracer, to_wrap, suppress_message_content, wrapped, instance, args, kwargs)
 
         return wrapper
 
@@ -357,7 +358,7 @@ def _with_tracer_wrapper(func):
 
 
 @_with_tracer_wrapper
-def _wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
+def _wrap(tracer, to_wrap, suppress_message_content, wrapped, instance, args, kwargs):
     """Instruments and calls every function defined in TO_WRAP."""
     if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
         return wrapped(*args, **kwargs)
@@ -383,7 +384,7 @@ def _wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
         if response:
             try:
                 if span.is_recording():
-                    _set_response_attributes(span, name, response)
+                    _set_response_attributes(span, name, response, suppress_message_content)
 
             except Exception as ex:  # pylint: disable=broad-except
                 logger.warning(
@@ -404,6 +405,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get("tracer_provider")
+        suppress_message_content = kwargs.get("suppress_message_content")
         tracer = get_tracer(__name__, __version__, tracer_provider)
         for to_wrap in TO_WRAP:
             wrap_object = to_wrap.get("object")
@@ -411,7 +413,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             wrap_function_wrapper(
                 "openai",
                 f"{wrap_object}.{wrap_method}",
-                _wrap(tracer, to_wrap)
+                _wrap(tracer, to_wrap, suppress_message_content)
             )
 
     def _uninstrument(self, **kwargs):
