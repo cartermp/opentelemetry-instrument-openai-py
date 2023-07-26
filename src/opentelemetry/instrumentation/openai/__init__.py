@@ -227,7 +227,7 @@ def _set_attributes_from_array(span, name, attributes, array_field, nestings=[])
     return
 
 
-def _set_input_attributes(span, name, to_wrap, kwargs):
+def _set_input_attributes(span, name, to_wrap, suppress_input_content, kwargs):
     """
     Capture input params as span attributes. 
     Unpacks 'message' input fields to separate attributes.
@@ -240,7 +240,7 @@ def _set_input_attributes(span, name, to_wrap, kwargs):
     # "input" fields can be very large, so we handle them specially 
     # depending on which api object they belong to. 
     _input = params.pop("input", None)
-    if _input:
+    if _input and not suppress_input_content:
         if name in ["openai.embedding"]:
             # input values for Embedding objects can be too
             # long so for that we only capture len(input)
@@ -257,12 +257,13 @@ def _set_input_attributes(span, name, to_wrap, kwargs):
 
     # set attributes from input fields nested under arrays 
     # {messages[]}
-    _set_attributes_from_array(
-        span=span,
-        name=name,
-        attributes=params,
-        array_field="messages"
-    )
+    if not suppress_input_content:
+        _set_attributes_from_array(
+            span=span,
+            name=name,
+            attributes=params,
+            array_field="messages"
+        )
 
     # set attributes from remaining input fields
     _set_attributes(
@@ -273,7 +274,7 @@ def _set_input_attributes(span, name, to_wrap, kwargs):
     return
 
 
-def _set_response_attributes(span, name, response, suppress_message_content):
+def _set_response_attributes(span, name, response, suppress_response_data):
     """
     Captures response fields as span attributes. 
     Unpacks 'choices', 'usage', and 'results' fields to separate attributes.
@@ -286,7 +287,7 @@ def _set_response_attributes(span, name, response, suppress_message_content):
     # "data" fields can be very large, so we handle them specially 
     # depending on which api object they belong to. 
     resp_data = resp_attributes.pop("data", None)
-    if resp_data and not suppress_message_content:
+    if resp_data and not suppress_response_data:
         if name in ["openai.embedding"]:
             # data values for Embedding objects can be too
             # long so for that we only capture len(data)
@@ -307,7 +308,7 @@ def _set_response_attributes(span, name, response, suppress_message_content):
 
     # set attributes from response fields nested under arrays 
     # {choices[], results[]}
-    if not suppress_message_content:
+    if not suppress_response_data:
         _set_attributes_from_array(
             span=span,
             name=f"{name}.response",
@@ -344,13 +345,13 @@ def _set_api_attributes(span):
 def _with_tracer_wrapper(func):
     """Helper for providing tracer for wrapper functions."""
 
-    def _with_tracer(tracer, to_wrap, suppress_message_content):
+    def _with_tracer(tracer, to_wrap, suppress_input_content, suppress_response_data):
         def wrapper(wrapped, instance, args, kwargs):
             # prevent double wrapping
             if hasattr(wrapped, "__wrapped__"):
                 return wrapped(*args, **kwargs)
 
-            return func(tracer, to_wrap, suppress_message_content, wrapped, instance, args, kwargs)
+            return func(tracer, to_wrap, suppress_input_content, suppress_response_data, wrapped, instance, args, kwargs)
 
         return wrapper
 
@@ -358,7 +359,7 @@ def _with_tracer_wrapper(func):
 
 
 @_with_tracer_wrapper
-def _wrap(tracer, to_wrap, suppress_message_content, wrapped, instance, args, kwargs):
+def _wrap(tracer, to_wrap, suppress_input_content, suppress_response_data, wrapped, instance, args, kwargs):
     """Instruments and calls every function defined in TO_WRAP."""
     if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
         return wrapped(*args, **kwargs)
@@ -371,7 +372,7 @@ def _wrap(tracer, to_wrap, suppress_message_content, wrapped, instance, args, kw
             _set_api_attributes(span)
         try:
             if span.is_recording():
-                _set_input_attributes(span, name, to_wrap, kwargs)
+                _set_input_attributes(span, name, to_wrap, suppress_input_content, kwargs)
 
         except Exception as ex:  # pylint: disable=broad-except
             logger.warning(
@@ -384,7 +385,7 @@ def _wrap(tracer, to_wrap, suppress_message_content, wrapped, instance, args, kw
         if response:
             try:
                 if span.is_recording():
-                    _set_response_attributes(span, name, response, suppress_message_content)
+                    _set_response_attributes(span, name, response, suppress_response_data)
 
             except Exception as ex:  # pylint: disable=broad-except
                 logger.warning(
@@ -405,7 +406,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get("tracer_provider")
-        suppress_message_content = kwargs.get("suppress_message_content")
+        suppress_response_data = kwargs.get("suppress_response_data")
+        suppress_input_content = kwargs.get("suppress_input_content")
         tracer = get_tracer(__name__, __version__, tracer_provider)
         for to_wrap in TO_WRAP:
             wrap_object = to_wrap.get("object")
@@ -413,7 +415,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             wrap_function_wrapper(
                 "openai",
                 f"{wrap_object}.{wrap_method}",
-                _wrap(tracer, to_wrap, suppress_message_content)
+                _wrap(tracer, to_wrap, suppress_input_content, suppress_response_data)
             )
 
     def _uninstrument(self, **kwargs):
