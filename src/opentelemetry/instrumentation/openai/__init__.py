@@ -240,7 +240,7 @@ def _set_input_attributes(span, name, to_wrap, suppress_input_content, kwargs):
     # "input" fields can be very large, so we handle them specially 
     # depending on which api object they belong to. 
     _input = params.pop("input", None)
-    if _input and not suppress_input_content:
+    if _input:
         if name in ["openai.embedding"]:
             # input values for Embedding objects can be too
             # long so for that we only capture len(input)
@@ -248,7 +248,7 @@ def _set_input_attributes(span, name, to_wrap, suppress_input_content, kwargs):
                 f"{name}.input_count",
                 len(_input)
             )
-        else:
+        elif not suppress_input_content:
             # but input values for other objects are interesting
             span.set_attribute(
                 f"{name}.input",
@@ -345,13 +345,13 @@ def _set_api_attributes(span):
 def _with_tracer_wrapper(func):
     """Helper for providing tracer for wrapper functions."""
 
-    def _with_tracer(tracer, to_wrap, suppress_input_content, suppress_response_data):
+    def _with_tracer(tracer, to_wrap, wrap_configs):
         def wrapper(wrapped, instance, args, kwargs):
             # prevent double wrapping
             if hasattr(wrapped, "__wrapped__"):
                 return wrapped(*args, **kwargs)
 
-            return func(tracer, to_wrap, suppress_input_content, suppress_response_data, wrapped, instance, args, kwargs)
+            return func(tracer, to_wrap, wrap_configs, wrapped, instance, args, kwargs)
 
         return wrapper
 
@@ -359,7 +359,7 @@ def _with_tracer_wrapper(func):
 
 
 @_with_tracer_wrapper
-def _wrap(tracer, to_wrap, suppress_input_content, suppress_response_data, wrapped, instance, args, kwargs):
+def _wrap(tracer, to_wrap, wrap_configs, wrapped, instance, args, kwargs):
     """Instruments and calls every function defined in TO_WRAP."""
     if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
         return wrapped(*args, **kwargs)
@@ -372,7 +372,7 @@ def _wrap(tracer, to_wrap, suppress_input_content, suppress_response_data, wrapp
             _set_api_attributes(span)
         try:
             if span.is_recording():
-                _set_input_attributes(span, name, to_wrap, suppress_input_content, kwargs)
+                _set_input_attributes(span, name, to_wrap, wrap_configs["suppress_input_content"], kwargs)
 
         except Exception as ex:  # pylint: disable=broad-except
             logger.warning(
@@ -385,7 +385,7 @@ def _wrap(tracer, to_wrap, suppress_input_content, suppress_response_data, wrapp
         if response:
             try:
                 if span.is_recording():
-                    _set_response_attributes(span, name, response, suppress_response_data)
+                    _set_response_attributes(span, name, response, wrap_configs["suppress_response_data"])
 
             except Exception as ex:  # pylint: disable=broad-except
                 logger.warning(
@@ -406,8 +406,10 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get("tracer_provider")
-        suppress_response_data = kwargs.get("suppress_response_data")
-        suppress_input_content = kwargs.get("suppress_input_content")
+        wrap_configs = {
+            "suppress_response_data": kwargs.get("suppress_response_data"),
+            "suppress_input_content": kwargs.get("suppress_input_content")
+        }
         tracer = get_tracer(__name__, __version__, tracer_provider)
         for to_wrap in TO_WRAP:
             wrap_object = to_wrap.get("object")
@@ -415,7 +417,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             wrap_function_wrapper(
                 "openai",
                 f"{wrap_object}.{wrap_method}",
-                _wrap(tracer, to_wrap, suppress_input_content, suppress_response_data)
+                _wrap(tracer, to_wrap, wrap_configs)
             )
 
     def _uninstrument(self, **kwargs):
