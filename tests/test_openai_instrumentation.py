@@ -207,6 +207,147 @@ class TestOpenAIInstrumentation(TestBase):
             max_tokens=150,
             user="test",
         )
+    
+    def test_instrument_chat_no_message_inputs(self):
+        mock_chat_completion = create_autospec(openai.ChatCompletion)
+        mock_chat_completion.create = MockChatCompletion.create
+        with mock.patch("openai.ChatCompletion", new=mock_chat_completion):
+            OpenAIInstrumentor().instrument(suppress_input_content = True)
+
+            result = self._call_chat()
+
+            span = self._assert_spans(1)
+            name = "openai.chat"
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.model"], "gpt-3.5-turbo")
+            self.assertNotIn(
+                f"{name}.messages.0.role",
+                span.attributes,
+                f"Unexpected attribute found: {name}.messages.0.role",
+            )
+            self.assertNotIn(
+                f"{name}.messages.0.content",
+                span.attributes,
+                f"Unexpected attribute found: {name}.messages.0.content",
+            )
+            self.assertEqual(span.attributes[f"{name}.temperature"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.top_p"], 1.0)
+            self.assertEqual(span.attributes[f"{name}.n"], 1)
+            self.assertEqual(span.attributes[f"{name}.stream"], False)
+            self.assertEqual(span.attributes[f"{name}.stop"], "")
+            self.assertEqual(span.attributes[f"{name}.max_tokens"], 150)
+            self.assertEqual(span.attributes[f"{name}.presence_penalty"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.frequency_penalty"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.logit_bias"], "")
+            self.assertEqual(span.attributes[f"{name}.user"], "test")
+
+            self.assertEqual(span.attributes[f"{name}.response.id"], result["id"])
+            self.assertEqual(
+                span.attributes[f"{name}.response.object"], result["object"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.created"], result["created"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.choices.0.message.role"],
+                result["choices"][0]["message"]["role"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.choices.0.message.content"],
+                result["choices"][0]["message"]["content"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.choices.0.finish_reason"],
+                result["choices"][0]["finish_reason"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.prompt_tokens"],
+                result["usage"]["prompt_tokens"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.completion_tokens"],
+                result["usage"]["completion_tokens"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.total_tokens"],
+                result["usage"]["total_tokens"],
+            )
+            
+            self._assert_api_attributes(span)
+
+            OpenAIInstrumentor().uninstrument()
+
+    
+    def test_instrument_chat_no_message_content(self):
+        mock_chat_completion = create_autospec(openai.ChatCompletion)
+        mock_chat_completion.create = MockChatCompletion.create
+        with mock.patch("openai.ChatCompletion", new=mock_chat_completion):
+            OpenAIInstrumentor().instrument(suppress_response_data = True)
+
+            result = self._call_chat()
+
+            span = self._assert_spans(1)
+            name = "openai.chat"
+            self.assertEqual(span.name, name)
+            self.assertEqual(span.attributes[f"{name}.model"], "gpt-3.5-turbo")
+            self.assertEqual(
+                span.attributes[f"{name}.messages.0.role"],
+                "user",
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.messages.0.content"],
+                "tell me a joke about opentelemetry",
+            )
+            self.assertEqual(span.attributes[f"{name}.temperature"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.top_p"], 1.0)
+            self.assertEqual(span.attributes[f"{name}.n"], 1)
+            self.assertEqual(span.attributes[f"{name}.stream"], False)
+            self.assertEqual(span.attributes[f"{name}.stop"], "")
+            self.assertEqual(span.attributes[f"{name}.max_tokens"], 150)
+            self.assertEqual(span.attributes[f"{name}.presence_penalty"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.frequency_penalty"], 0.0)
+            self.assertEqual(span.attributes[f"{name}.logit_bias"], "")
+            self.assertEqual(span.attributes[f"{name}.user"], "test")
+
+            self.assertEqual(span.attributes[f"{name}.response.id"], result["id"])
+            self.assertEqual(
+                span.attributes[f"{name}.response.object"], result["object"]
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.created"], result["created"]
+            )
+            self.assertNotIn(
+                f"{name}.response.choices.0.message.role",
+                span.attributes,
+                f"Unexpected attribute found: {name}.response.choices.0.message.role",
+            )
+            self.assertNotIn(
+                f"{name}.response.choices.0.message.content",
+                span.attributes,
+                f"Unexpected attribute found: {name}.response.choices.0.message.content",
+            )
+            self.assertNotIn(
+                f"{name}.response.choices.0.finish_reason",
+                span.attributes,
+                f"Unexpected attribute found: {name}.response.choices.0.finish_reason",
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.prompt_tokens"],
+                result["usage"]["prompt_tokens"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.completion_tokens"],
+                result["usage"]["completion_tokens"],
+            )
+            self.assertEqual(
+                span.attributes[f"{name}.response.usage.total_tokens"],
+                result["usage"]["total_tokens"],
+            )
+            
+            self._assert_api_attributes(span)
+
+            OpenAIInstrumentor().uninstrument()
+
 
     def test_instrument_chat(self):
         mock_chat_completion = create_autospec(openai.ChatCompletion)
