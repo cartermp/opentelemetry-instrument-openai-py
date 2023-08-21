@@ -6,6 +6,7 @@ How to run:
 Now:
 
 ```shell
+poetry lock
 poetry install
 poetry run opentelemetry-bootstrap -a install
 poetry run opentelemetry-instrument \
