@@ -24,6 +24,7 @@ To see it in honeycomb:
 export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.honeycomb.io"
 export OTEL_EXPORTER_OTLP_HEADERS="x-honeycomb-team=YOUR-API-HONEYCOMB-API-KEY"
 export OTEL_SERVICE_NAME="your-service-name"
+poetry lock
 poetry install
 poetry run opentelemetry-bootstrap -a install
 poetry run opentelemetry-instrument python chat.py
